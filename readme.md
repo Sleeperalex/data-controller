@@ -4,6 +4,7 @@
 
 ```bash
 git clone https://github.com/Sleeperalex/data-controller.git
+cd data-controller
 pip install -r requirements
 mkdir datasets
 ```
