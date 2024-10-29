@@ -55,6 +55,7 @@ def main():
             number_of_empty_values(df_pd)
 
             # Data Variation
+            st.subheader("Data Variation")
             date_columns = df_pd.select_dtypes(include=['datetime64', 'object']).columns.tolist()
             numeric_columns = df_pd.select_dtypes(include=['float64', 'int64']).columns.tolist()
             date_column = st.selectbox("Select Date Column for Variation Calculation", date_columns)
