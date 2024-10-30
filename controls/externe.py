@@ -1,3 +1,5 @@
+# controls/externe.py
+
 import streamlit as st
 import pandas as pd
 
@@ -52,8 +54,9 @@ def detect_outliers_by_sector(df: pd.DataFrame):
     """Detect outliers in a selected numeric column by sector."""
     st.subheader("Détection des Valeurs Extrêmes par Secteur")
     
+    # Filter for columns that have non-unique values
+    sector_columns = [col for col in df.columns if df[col].nunique() < len(df)]
     # Let the user select the sector column
-    sector_columns = df.columns.tolist()
     sector_column = st.selectbox("Sélectionnez la colonne de secteur", sector_columns)
 
     if sector_column not in sector_columns:
