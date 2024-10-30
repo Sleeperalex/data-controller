@@ -7,23 +7,17 @@ import os
 from controls.externe import *
 from controls.interne import *
 
-def load_data(dataset_folder):
-    """Load the data from CSV files in the specified folder."""
-    # List CSV files in the folder
-    csv_files = [f for f in os.listdir(dataset_folder) if f.endswith('.csv')]
-    selected_file = st.sidebar.selectbox("Select a CSV file", csv_files)
+@st.cache_data
+def load_data(file_path) -> pd.DataFrame:
+    """Load data from a CSV file and cache the result."""
+    # Load dataset using Dask and convert to Pandas DataFrame
+    df = dd.read_csv(file_path, sep=';')
+    df_pd: pd.DataFrame = df.compute()  # Convert to Pandas for easier processing
+    return df_pd
 
-    if selected_file:
-        file_path = os.path.join(dataset_folder, selected_file)
-        # Load dataset using Dask and convert to Pandas DataFrame
-        df = dd.read_csv(file_path, sep=';')
-        df_pd = df.compute()  # Convert to Pandas for easier processing
-        st.write("Dataset Preview:")
-        st.write(df_pd.head(5))
-        return df_pd
-    else:
-        st.error("No CSV files found in the dataset folder.")
-        return None
+def load_file_options(dataset_folder):
+    """Get available CSV file options from the dataset folder."""
+    return [f for f in os.listdir(dataset_folder) if f.endswith('.csv')]
 
 def main():
     st.title("ESG Data Controller")
@@ -36,18 +30,25 @@ def main():
         st.error(f"The folder '{dataset_folder}' does not exist. Please create it and place your CSV files inside.")
         return
 
-    # Load the data
-    df_pd = load_data(dataset_folder)
+    # File selection dropdown
+    csv_files = load_file_options(dataset_folder)
+    selected_file = st.sidebar.selectbox("Select a CSV file", csv_files)
 
-    # If data is loaded successfully, display page options
-    if df_pd is not None:
+    if selected_file:
+        file_path = os.path.join(dataset_folder, selected_file)
+        df_pd = load_data(file_path)  # Load data with caching
+
+        st.write("Dataset Preview:")
+        st.write(df_pd.head(5))
+        st.write("Dataset shape:", df_pd.shape)
+
         # Sidebar navigation for different pages
         page = st.sidebar.radio("Choose Control Type", ["External Controls", "Internal Controls"])
 
         # External Controls page
         if page == "External Controls":
             st.header("External Data Quality Controls")
-            
+
             # Missing Data Percentage
             missing_data_percent = missing_data_percentage(df_pd)
 
@@ -71,9 +72,6 @@ def main():
 
             # Detect Outliers by Sector
             detect_outliers_by_sector(df_pd)
-
-            # Update Frequency
-            #update_frequency(df_pd, date_column)
 
         # Internal Controls page
         elif page == "Internal Controls":
