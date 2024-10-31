@@ -3,7 +3,7 @@
 import streamlit as st
 import pandas as pd
 import dask.dataframe as dd
-import os
+import os, re
 
 # Import external and internal control functions
 from controls.externe import *
@@ -35,14 +35,8 @@ def external_controls_page(df_pd):
     # Number of Empty Values
     number_of_empty_values(df_pd)
 
-    # Data Variation
-    st.subheader("Data Variation")
-    date_columns = df_pd.select_dtypes(include=['datetime64', 'object']).columns.tolist()
-    numeric_columns = df_pd.select_dtypes(include=['float64', 'int64']).columns.tolist()
-    date_column = st.selectbox("Select Date Column for Variation Calculation", date_columns)
-    metric_column = st.selectbox("Select Metric Column for Variation Calculation", numeric_columns)
-    if date_column and metric_column:
-        data_variation(df_pd, date_column, metric_column)
+
+    data_variation(df_pd)
 
     # Data Quality Score
     data_quality_score(missing_data_percent)
