@@ -2,8 +2,7 @@
 
 import streamlit as st
 import pandas as pd
-import dask.dataframe as dd
-import os, re
+import os
 
 # Import external and internal control functions
 from controls.externe import *
@@ -16,40 +15,58 @@ st.set_page_config(page_title="ESG Data Controller", layout="wide")
 def load_data(file_path=None, uploaded_file=None) -> pd.DataFrame:
     """Load data from a CSV file or an uploaded file and cache the result."""
     if uploaded_file is not None:
-        df = pd.read_csv(uploaded_file, sep=';')
+        df = pd.read_csv(uploaded_file,index_col=0, sep=";")
     else:
-        df = dd.read_csv(file_path, sep=';').compute()  # Load from file path and convert to Pandas
+        df = pd.read_csv(file_path,index_col=0, sep=";")
     return df
 
 def load_file_options(dataset_folder):
     """Get available CSV file options from the dataset folder."""
     return [f for f in os.listdir(dataset_folder) if f.endswith('.csv')]
 
-def external_controls_page(df_pd):
+def external_controls_page(df_pd: pd.DataFrame):
     """Display the External Controls page content."""
-    st.header("External Data Quality Controls")
+
+    st.markdown("<br><br>", True)
+    st.markdown("<h2 style='text-align: center;'>External Data Quality Controls</h2>", True)
+    st.markdown("<br><br>", True)
     
-    # Missing Data Percentage
-    missing_data_percent = missing_data_percentage(df_pd)
+    # Missing Data
+    st.subheader("Missing Data")
+    mdp = missing_data_percentage(df_pd)
+    col1, col2, col3 = st.columns(3)
+    col1.text("Missing Data Percentage")
+    col1.write(mdp)
+    col2.text("Number of Empty Values")
+    col2.write(number_of_empty_values(df_pd))
+    col3.text("Bar Chart of Missing Data Percentage")
+    col3.bar_chart(mdp)
+    st.write("Calculate and display the percentage of missing data in each column.")
 
-    # Number of Empty Values
-    number_of_empty_values(df_pd)
-
-
-    data_variation(df_pd)
+    # Data Variation
+    #data_variation(df_pd)
 
     # Data Quality Score
-    data_quality_score(missing_data_percent)
+    st.subheader("Data Quality Score")
+    qs=data_quality_score(df_pd)
+    st.write(f"Overall Data Quality Score: {qs:.2f}%")
+    st.write("The data quality score is one minus the percentage of missing data in each column.")
 
     # Basic Information for Numeric Columns
-    numerical_columns_iformation(df_pd)
+    st.subheader("Basic Information")
+    col1, col2 = st.columns(2)
+    col1.write(df_pd.describe())
+    col2.plotly_chart(plot_heatmap(df_pd), theme="streamlit")
+
 
     # Detect Outliers by Sector
     detect_outliers_by_sector(df_pd)
 
 def internal_controls_page(df_pd):
     """Display the Internal Controls page content."""
-    st.header("Internal Data Quality Controls")
+    st.markdown("<br><br>", True)
+    st.markdown("<h2 style='text-align: center;'>Internal Data Quality Controls</h2>", True)
+    st.markdown("<br><br>", True)
 
     # Execution Time
     execution_time_computation()
@@ -61,7 +78,7 @@ def internal_controls_page(df_pd):
     dataset_health(df_pd)
 
 def main():
-    st.title("ESG Data Controller")
+    st.markdown("<h1 style='text-align: center;'>ESG Data Controller</h1>", True)
 
     # Specify dataset folder
     dataset_folder = 'datasets'
@@ -84,7 +101,7 @@ def main():
 
     # Display dataset preview
     st.write("Dataset Preview:")
-    st.write(df_pd.head(5))
+    st.write(df_pd.head(100))
     st.write("Dataset shape:", df_pd.shape)
 
     # Sidebar page navigation

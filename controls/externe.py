@@ -3,31 +3,28 @@
 import streamlit as st
 import pandas as pd
 import re
+import plotly.express as px
 
-def numerical_columns_iformation(df: pd.DataFrame):
-    """Display numerical columns information."""
-    st.subheader("Basic Information")
-    st.write(df.describe())
-    st.write("Display numerical columns information.")
-    return
+def plot_heatmap(df: pd.DataFrame):
+    """Plot a heatmap of the correlation matrix of numeric columns."""
+    numeric_df = df.select_dtypes(include=['int64', 'float64'])
+    if numeric_df.empty:
+        raise ValueError("No numeric columns available to plot.")
+    corr_matrix = numeric_df.corr()
+    fig = px.imshow(corr_matrix, 
+                    text_auto=True,  # Show values in the cells
+                    color_continuous_scale="YlGnBu",  # Color scale
+                    labels=dict(color="Correlation"),
+                    title="Correlation Heatmap of Numeric Columns")
+    return fig
 
 def missing_data_percentage(df: pd.DataFrame):
     """Calculate and display the percentage of missing data in each column."""
-    st.subheader("Missing Data Percentage")
-    missing_data_percent = round(df.isnull().mean() * 100, 2)
-    col1, col2 = st.columns(2)
-    col1.write(missing_data_percent)
-    col2.bar_chart(missing_data_percent)
-    st.write("Calculate and display the percentage of missing data in each column.")
-    return missing_data_percent
+    return round(df.isnull().mean() * 100, 2)
 
 def number_of_empty_values(df: pd.DataFrame):
     """Calculate and display the number of empty values in each column."""
-    st.subheader("Number of Empty Values")
-    empty_values = df.isnull().sum()
-    st.write(empty_values)
-    st.write("Calculate and display the number of empty values in each column.")
-    return empty_values
+    return df.isnull().sum()
 
 def data_variation(df_pd: pd.DataFrame):
     st.subheader("Data Variation")
@@ -81,14 +78,9 @@ def data_variation(df_pd: pd.DataFrame):
             else:
                 st.warning("Selected columns do not contain enough valid data for variation calculation.")
 
-def data_quality_score(missing_data_percent):
+def data_quality_score(df: pd.DataFrame):
     """Calculate and display the data quality score."""
-    st.subheader("Data Quality Score")
-    data_quality_score = 100 - missing_data_percent.mean()
-    st.write(f"Overall Data Quality Score: {data_quality_score:.2f}%")
-    st.write("The data quality score is one minus the percentage of missing data in each column.")
-    return data_quality_score
-
+    return 100 - round(df.isnull().mean() * 100, 2).mean()
 
 def detect_outliers_by_sector(df: pd.DataFrame):
     """Detect outliers in a selected numeric column by sector."""
@@ -146,11 +138,6 @@ def detect_outliers_by_sector(df: pd.DataFrame):
             st.write("Aucune colonne numérique disponible pour la détection des valeurs extrêmes.")
     else:
         st.write(f"La colonne de secteur '{sector_column}' n'existe pas dans le dataset.")
-
-
-
-
-
 
 def update_frequency(df: pd.DataFrame, date_column):
     """Calculate and display the average update frequency."""
