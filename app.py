@@ -3,6 +3,7 @@
 import streamlit as st
 import pandas as pd
 import os
+from collections import Counter
 
 # Import external and internal control functions
 from controls.externe import *
@@ -14,11 +15,30 @@ st.set_page_config(page_title="ESG Data Controller", layout="wide")
 @st.cache_data
 def load_data(file_path=None, uploaded_file=None) -> pd.DataFrame:
     """Load data from a CSV file or an uploaded file and cache the result."""
+    delimiter = find_csv_delimiter(file_path)
     if uploaded_file is not None:
-        df = pd.read_csv(uploaded_file,index_col=0, sep=";")
+        df = pd.read_csv(uploaded_file,index_col=0, sep=delimiter)
     else:
-        df = pd.read_csv(file_path,index_col=0, sep=";")
+        df = pd.read_csv(file_path,index_col=0, sep=delimiter)
     return df
+
+
+def find_csv_delimiter(data_file):
+    """Detect the delimiter of a CSV file."""
+    # Define possible delimiters
+    possible_delimiters = [',', ';', '\t', '|']
+    # Read the first few lines of the file to detect the delimiter
+    with open(data_file, 'r', newline='') as file:
+        sample_lines = [next(file) for _ in range(5)]  # Read first 5 lines
+    # Count occurrences of each delimiter
+    delimiter_counts = Counter()
+    for line in sample_lines:
+        for delimiter in possible_delimiters:
+            delimiter_counts[delimiter] += line.count(delimiter)
+    # Find the delimiter with the maximum count
+    if delimiter_counts:
+        return delimiter_counts.most_common(1)[0][0]  # Return the most common delimiter
+    return None  # Return None if no delimiter found
 
 def load_file_options(dataset_folder):
     """Get available CSV file options from the dataset folder."""
