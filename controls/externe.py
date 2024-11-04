@@ -86,8 +86,11 @@ def detect_outliers_by_sector(df: pd.DataFrame):
     """Detect outliers in a selected numeric column by sector."""
     st.subheader("Détection des Valeurs Extrêmes par Secteur")
     
-    # Filter for columns that have non-unique values
-    sector_columns = [col for col in df.columns if df[col].nunique() < len(df)]
+    # Filter for non-numeric columns that have non-unique values
+    sector_columns = [
+        col for col in df.columns 
+        if df[col].nunique() < len(df) and not pd.api.types.is_numeric_dtype(df[col])
+    ]
     # Let the user select the sector column
     sector_column = st.selectbox("Sélectionnez la colonne de secteur", sector_columns)
 
