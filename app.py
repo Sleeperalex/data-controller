@@ -4,6 +4,7 @@ import streamlit as st
 import pandas as pd
 import os
 from collections import Counter
+import io
 
 # Import external and internal control functions
 from controls.externe import *
@@ -15,44 +16,46 @@ st.set_page_config(page_title="ESG Data Controller", layout="wide")
 @st.cache_data
 def load_data(file_path=None, uploaded_file=None) -> pd.DataFrame:
     """Load data from a CSV file or an uploaded file and cache the result."""
-    delimiter = find_csv_delimiter(file_path)
-    index_column = detect_index_column(file_path)
     if uploaded_file is not None:
+        delimiter = find_csv_delimiter(uploaded_file)
+        index_column = detect_index_column(uploaded_file, delimiter)
         df = pd.read_csv(uploaded_file,index_col=index_column, sep=delimiter)
-    else:
+    elif file_path is not None:
+        delimiter = find_csv_delimiter(file_path)
+        index_column = detect_index_column(file_path, delimiter)
         df = pd.read_csv(file_path,index_col=index_column, sep=delimiter)
     return df
 
-def detect_index_column(file_path):
-    """
-    Detects the index column in a CSV file.
-    """
-    # Read a sample of the CSV to detect potential index column
-    df = pd.read_csv(file_path, sep=find_csv_delimiter(file_path))
-    
-    for col_index, col_name in enumerate(df.columns):
-        # Check if the column is integer type, has unique values, and matches 1 to len(df)
-        if pd.api.types.is_integer_dtype(df[col_name]):
-            if df[col_name].is_unique and (df[col_name] == range(0, len(df))).all():
-                return col_index
-    return None
-
-def find_csv_delimiter(data_file):
-    """Detect the delimiter of a CSV file."""
-    # Define possible delimiters
-    possible_delimiters = [',', ';', '\t', '|']
+@st.cache_data
+def find_csv_delimiter(data_file) -> str:
+    """Detect the delimiter of a CSV file, handling both file paths and file-like objects."""
+    possible_delimiters = [',', ';', '\t', '|', ':']
     # Read the first few lines of the file to detect the delimiter
-    with open(data_file, 'r', newline='') as file:
-        sample_lines = [next(file) for _ in range(5)]  # Read first 5 lines
-    # Count occurrences of each delimiter
-    delimiter_counts = Counter()
-    for line in sample_lines:
-        for delimiter in possible_delimiters:
-            delimiter_counts[delimiter] += line.count(delimiter)
-    # Find the delimiter with the maximum count
-    if delimiter_counts:
-        return delimiter_counts.most_common(1)[0][0]  # Return the most common delimiter
-    return None  # Return None if no delimiter found
+    if isinstance(data_file, io.BytesIO) or isinstance(data_file, io.TextIOWrapper):  # For uploaded file (file-like object)
+        sample = data_file.read(1024).decode('utf-8')  # Read and decode first 1024 bytes
+        data_file.seek(0)  # Reset pointer to start of file for further reading
+    else:  # For file path
+        with open(data_file, 'r', newline='') as file:
+            sample = ''.join([next(file) for _ in range(5)])  # Read first 5 lines as a single string
+    # Count occurrences of each delimiter in the sample
+    delimiter_counts = Counter({delimiter: sample.count(delimiter) for delimiter in possible_delimiters})
+    # Return the delimiter with the maximum count
+    return delimiter_counts.most_common(1)[0][0] if delimiter_counts else None  # Most common delimiter
+
+@st.cache_data
+def detect_index_column(data_file, delimiter) -> int:
+    """Detect the index column in a CSV file with a known delimiter."""
+    if isinstance(data_file, io.BytesIO) or isinstance(data_file, io.TextIOWrapper):  # File-like object
+        data_file.seek(0)  # Reset pointer to start
+        df = pd.read_csv(data_file, sep=delimiter, nrows=1000)
+        data_file.seek(0)  # Reset pointer to start again
+    else:  # File path
+        df = pd.read_csv(data_file, sep=delimiter, nrows=1000)
+
+    for col_index, col_name in enumerate(df.columns):
+        if pd.api.types.is_integer_dtype(df[col_name]) and df[col_name].is_unique and (df[col_name] == range(len(df))).all():
+            return col_index
+    return None
 
 def load_file_options(dataset_folder):
     """Get available CSV file options from the dataset folder."""
