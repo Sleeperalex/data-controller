@@ -16,12 +16,26 @@ st.set_page_config(page_title="ESG Data Controller", layout="wide")
 def load_data(file_path=None, uploaded_file=None) -> pd.DataFrame:
     """Load data from a CSV file or an uploaded file and cache the result."""
     delimiter = find_csv_delimiter(file_path)
+    index_column = detect_index_column(file_path)
     if uploaded_file is not None:
-        df = pd.read_csv(uploaded_file,index_col=0, sep=delimiter)
+        df = pd.read_csv(uploaded_file,index_col=index_column, sep=delimiter)
     else:
-        df = pd.read_csv(file_path,index_col=0, sep=delimiter)
+        df = pd.read_csv(file_path,index_col=index_column, sep=delimiter)
     return df
 
+def detect_index_column(file_path):
+    """
+    Detects the index column in a CSV file.
+    """
+    # Read a sample of the CSV to detect potential index column
+    df = pd.read_csv(file_path, sep=find_csv_delimiter(file_path))
+    
+    for col_index, col_name in enumerate(df.columns):
+        # Check if the column is integer type, has unique values, and matches 1 to len(df)
+        if pd.api.types.is_integer_dtype(df[col_name]):
+            if df[col_name].is_unique and (df[col_name] == range(0, len(df))).all():
+                return col_index
+    return None
 
 def find_csv_delimiter(data_file):
     """Detect the delimiter of a CSV file."""
