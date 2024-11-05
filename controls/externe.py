@@ -36,14 +36,6 @@ def verify_date_format(df_pd: pd.DataFrame, date_format: str, match_threshold=0.
     """
     Identifies columns in the DataFrame that mostly match one of the common date formats and
     returns a DataFrame with the percentage of values matching the format.
-    
-    Parameters:
-    - df_pd (pd.DataFrame): The input DataFrame.
-    - date_format (str): The date format to verify, e.g., "YYYY-MM-DD".
-    - match_threshold (float): The minimum proportion of matching values required to consider a column as valid.
-    
-    Returns:
-    - pd.DataFrame: A DataFrame with columns 'Column' and 'Match Percentage' for columns that match the given date format.
     """
     # Define regex patterns for various date formats
     date_patterns = {
