@@ -19,14 +19,13 @@ def load_data(file_path=None, uploaded_file=None) -> pd.DataFrame:
     if uploaded_file is not None:
         delimiter = find_csv_delimiter(uploaded_file)
         index_column = detect_index_column(uploaded_file, delimiter)
-        df = pd.read_csv(uploaded_file,index_col=index_column, sep=delimiter)
+        df = pd.read_csv(uploaded_file,index_col=index_column, sep=delimiter,low_memory=False)
     elif file_path is not None:
         delimiter = find_csv_delimiter(file_path)
         index_column = detect_index_column(file_path, delimiter)
-        df = pd.read_csv(file_path,index_col=index_column, sep=delimiter)
+        df = pd.read_csv(file_path,index_col=index_column, sep=delimiter,low_memory=False)
     return df
 
-@st.cache_data
 def find_csv_delimiter(data_file) -> str:
     """Detect the delimiter of a CSV file, handling both file paths and file-like objects."""
     possible_delimiters = [',', ';', '\t', '|', ':']
@@ -42,7 +41,6 @@ def find_csv_delimiter(data_file) -> str:
     # Return the delimiter with the maximum count
     return delimiter_counts.most_common(1)[0][0] if delimiter_counts else None  # Most common delimiter
 
-@st.cache_data
 def detect_index_column(data_file, delimiter) -> int:
     """Detect the index column in a CSV file with a known delimiter."""
     if isinstance(data_file, io.BytesIO) or isinstance(data_file, io.TextIOWrapper):  # File-like object
@@ -80,8 +78,20 @@ def external_controls_page(df_pd : pd.DataFrame):
     col3.bar_chart(mdp)
     st.write("Calculate and display the percentage of missing data in each column.")
 
-    # Data Variation
-    #data_variation(df_pd)
+    # Verify Date Format
+    st.subheader("Verify Date Format")
+    date_formats = [
+        "YYYY-MM-DD", "DD-MM-YYYY", "MM-DD-YYYY",
+        "YYYY/MM/DD", "DD/MM/YYYY", "MM/DD/YYYY",
+        "YYYY.MM.DD", "DD.MM.YYYY", "MM-YYYY", "YYYY"
+    ]
+    control_format = st.selectbox("Select a date format to check:", date_formats)
+    matched_columns = verify_date_format(df_pd, date_format=control_format)
+    if not matched_columns.empty:
+        st.write(f"Columns following the format '{control_format}':")
+        st.write(matched_columns)
+    else:
+        st.warning(f"No columns found that match the format '{control_format}'.")
 
     # Data Quality Score
     st.subheader("Data Quality Score")

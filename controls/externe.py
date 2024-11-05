@@ -5,6 +5,7 @@ import pandas as pd
 import re
 import plotly.express as px
 
+@st.cache_data
 def plot_heatmap(df: pd.DataFrame):
     """Plot a heatmap of the correlation matrix of numeric columns."""
     numeric_df = df.select_dtypes(include=['int64', 'float64'])
@@ -18,66 +19,74 @@ def plot_heatmap(df: pd.DataFrame):
                     title="Correlation Heatmap of Numeric Columns")
     return fig
 
+@st.cache_data
 def missing_data_percentage(df: pd.DataFrame):
     """Calculate and display the percentage of missing data in each column."""
-    return round(df.isnull().mean() * 100, 2)
+    mdp = round(df.isnull().mean() * 100, 2)
+    return mdp
 
+@st.cache_data
 def number_of_empty_values(df: pd.DataFrame):
     """Calculate and display the number of empty values in each column."""
-    return df.isnull().sum()
+    nofv = df.isnull().sum()
+    return nofv
 
-def data_variation(df_pd: pd.DataFrame):
-    st.subheader("Data Variation")
-    # Regex patterns for various date formats
-    date_regex = re.compile(
-        r'^\d{4}[-/\.]\d{2}[-/\.]\d{2}$'         # Matches YYYY-MM-DD, YYYY/MM/DD, YYYY.MM.DD
-        r'|^\d{2}[-/\.]\d{2}[-/\.]\d{4}$'        # Matches DD-MM-YYYY, DD/MM/YYYY, DD.MM.YYYY
-        r'|^\d{2}[-/\.]\d{2}[-/\.]\d{4}$'        # Matches MM-DD-YYYY, MM/DD/YYYY, MM.DD.YYYY
-        r'|^\d{4}[-/\.]\d{2}$'                   # Matches YYYY-MM, YYYY/MM, YYYY.MM
-        r'|^\d{2}[-/\.]\d{4}$'                   # Matches MM-YYYY, MM/YYYY, MM.YYYY
-        r'|^\d{4}$'                              # Matches YYYY
-    )
+@st.cache_data
+def verify_date_format(df_pd: pd.DataFrame, date_format: str, match_threshold=0.9) -> pd.DataFrame:
+    """
+    Identifies columns in the DataFrame that mostly match one of the common date formats and
+    returns a DataFrame with the percentage of values matching the format.
+    
+    Parameters:
+    - df_pd (pd.DataFrame): The input DataFrame.
+    - date_format (str): The date format to verify, e.g., "YYYY-MM-DD".
+    - match_threshold (float): The minimum proportion of matching values required to consider a column as valid.
+    
+    Returns:
+    - pd.DataFrame: A DataFrame with columns 'Column' and 'Match Percentage' for columns that match the given date format.
+    """
+    # Define regex patterns for various date formats
+    date_patterns = {
+        "YYYY-MM-DD": re.compile(r'^\d{4}-\d{2}-\d{2}$'),
+        "DD-MM-YYYY": re.compile(r'^\d{2}-\d{2}-\d{4}$'),
+        "MM-DD-YYYY": re.compile(r'^\d{2}-\d{2}-\d{4}$'),
+        "YYYY/MM/DD": re.compile(r'^\d{4}/\d{2}/\d{2}$'),
+        "DD/MM/YYYY": re.compile(r'^\d{2}/\d{2}/\d{4}$'),
+        "MM/DD/YYYY": re.compile(r'^\d{2}/\d{2}/\d{4}$'),
+        "YYYY.MM.DD": re.compile(r'^\d{4}\.\d{2}\.\d{2}$'),
+        "DD.MM.YYYY": re.compile(r'^\d{2}\.\d{2}\.\d{4}$'),
+        "MM-YYYY": re.compile(r'^\d{2}-\d{4}$'),
+        "YYYY": re.compile(r'^\d{4}$')
+    }
+    
+    # Check if the specified format is supported
+    if date_format not in date_patterns:
+        st.error(f"Unsupported date format: {date_format}")
+        return pd.DataFrame(columns=['Column', 'Match Percentage'])
 
-    # Set the percentage threshold for date-like values in a column (e.g., 50%)
-    MIN_DATE_MATCH_PERCENTAGE = 0.5
+    # Get the regex pattern for the specified date format
+    date_regex = date_patterns[date_format]
+    
+    # List to store columns and match percentages
+    results = []
 
-    # Identify potential date columns using regex, excluding columns with "id" in the name
-    date_columns = [
-        col for col in df_pd.columns
-        if (df_pd[col].apply(lambda x: bool(date_regex.match(str(x)))).mean() >= MIN_DATE_MATCH_PERCENTAGE) 
-        and (("id" and "unnamed") not in col.lower())
-    ]
-
-    # Identify numeric columns
-    numeric_columns = df_pd.select_dtypes(include=['float64', 'int64']).columns.tolist()
-
-    # Display warning if no valid date-like or numeric columns are available
-    if not date_columns:
-        st.warning("No suitable date-like columns found for variation calculation.")
-    elif not numeric_columns:
-        st.warning("No numeric columns found for variation calculation.")
-    else:
-        # Proceed with selection only if both date and numeric columns are available
-        date_column = st.selectbox("Select Date Column for Variation Calculation", date_columns)
-        metric_column = st.selectbox("Select Metric Column for Variation Calculation", numeric_columns)
-
-        if date_column and metric_column:
-            # Ensure metric column is converted to numeric
-            df_pd[metric_column] = pd.to_numeric(df_pd[metric_column], errors='coerce')
+    # Check each column
+    for col in df_pd.columns:
+        # Skip columns likely to be IDs or unnamed columns, or columns without any digits
+        if "id" not in col.lower() and "unnamed" not in col.lower() and not any(char.isdigit() for char in col):
+            # Calculate the proportion of non-null values that match the date format
+            match_ratio = df_pd[col].dropna().apply(lambda x: bool(date_regex.match(str(x)))).mean()
             
-            # Call the data_variation function only if there is valid data in both columns
-            if df_pd[date_column].notna().any() and df_pd[metric_column].notna().any():
-                    df_pd[date_column] = pd.to_datetime(df_pd[date_column],errors='coerce')
-                    df_sorted = df_pd.sort_values(by=date_column)
+            # Only include columns that meet the match threshold
+            if match_ratio >= match_threshold:
+                results.append({'Column': col, 'Match Percentage': round(match_ratio * 100, 2)})
 
-                    df_sorted.set_index(date_column, inplace=True)
-                    df_resampled = df_sorted[metric_column].resample('W').sum()
+    # Convert results to DataFrame
+    match_df = pd.DataFrame(results, columns=['Column', 'Match Percentage'])
 
-                    df_variation = df_resampled.pct_change() * 100
-                    st.line_chart(df_variation)
-            else:
-                st.warning("Selected columns do not contain enough valid data for variation calculation.")
+    return match_df
 
+@st.cache_data
 def data_quality_score(df: pd.DataFrame):
     """Calculate and display the data quality score."""
     return 100 - round(df.isnull().mean() * 100, 2).mean()
@@ -92,7 +101,7 @@ def detect_outliers_by_sector(df: pd.DataFrame):
         if df[col].nunique() < len(df) and not pd.api.types.is_numeric_dtype(df[col])
     ]
     # Let the user select the sector column
-    sector_column = st.selectbox("Sélectionnez la colonne de secteur", sector_columns)
+    sector_column = st.selectbox("Sélectionnez la colonne de secteur", sector_columns,key="sector_column")
 
     if sector_column not in sector_columns:
         st.write("Aucune colonne de secteur disponible pour la détection des valeurs extrêmes.")
@@ -100,12 +109,12 @@ def detect_outliers_by_sector(df: pd.DataFrame):
     
     if sector_column in df.columns:
         sectors = df[sector_column].unique().tolist()
-        selected_sector = st.selectbox("Sélectionnez un secteur", sectors)
+        selected_sector = st.selectbox("Sélectionnez un secteur", sectors, key="selected_sector")
         
         # Get numeric columns
         numeric_columns = df.select_dtypes(include=['float64', 'int64']).columns.tolist()
         if numeric_columns:
-            selected_numeric_column = st.selectbox("Sélectionnez une colonne numérique", numeric_columns)
+            selected_numeric_column = st.selectbox("Sélectionnez une colonne numérique", numeric_columns, key="numeric_column")
             if st.button("Détecter les Valeurs Extrêmes par Secteur"):
                 # Filter the dataframe for the selected sector
                 df_sector = df[df[sector_column] == selected_sector]
