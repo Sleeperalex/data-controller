@@ -32,7 +32,7 @@ def number_of_empty_values(df: pd.DataFrame):
     return nofv
 
 @st.cache_data
-def verify_date_format(df_pd: pd.DataFrame, date_format: str, match_threshold=0.9) -> pd.DataFrame:
+def verify_date_format(df_pd: pd.DataFrame, date_format: str) -> pd.DataFrame:
     """
     Identifies columns in the DataFrame that mostly match one of the common date formats and
     returns a DataFrame with the percentage of values matching the format.
@@ -118,6 +118,7 @@ def detect_outliers_by_sector(df: pd.DataFrame, sector_column: str, selected_sec
         return unique_outliers
     else:
         return None
+
 
 def update_frequency(df: pd.DataFrame, date_column):
     """Calculate and display the average update frequency."""
