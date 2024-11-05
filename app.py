@@ -61,7 +61,7 @@ def load_file_options(dataset_folder):
     """Get available CSV file options from the dataset folder."""
     return [f for f in os.listdir(dataset_folder) if f.endswith('.csv')]
 
-def external_controls_page(df_pd: pd.DataFrame):
+def external_controls_page(df_pd : pd.DataFrame):
     """Display the External Controls page content."""
 
     st.markdown("<br><br>", True)
@@ -99,7 +99,7 @@ def external_controls_page(df_pd: pd.DataFrame):
     # Detect Outliers by Sector
     detect_outliers_by_sector(df_pd)
 
-def internal_controls_page(df_pd):
+def internal_controls_page(df_pd : pd.DataFrame):
     """Display the Internal Controls page content."""
     st.markdown("<br><br>", True)
     st.markdown("<h2 style='text-align: center;'>Internal Data Quality Controls</h2>", True)
