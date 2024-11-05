@@ -107,7 +107,24 @@ def external_controls_page(df_pd : pd.DataFrame):
 
 
     # Detect Outliers by Sector
-    detect_outliers_by_sector(df_pd)
+    st.subheader("Détection des Valeurs Extrêmes par Secteur")
+    sector_columns = [col for col in df_pd.columns if df_pd[col].nunique() < len(df_pd) and not pd.api.types.is_numeric_dtype(df_pd[col])]
+    sector_column = st.selectbox("Sélectionnez la colonne de secteur", sector_columns, key="sector_column")
+    if sector_column:
+        sectors = df_pd[sector_column].unique().tolist()
+        selected_sector = st.selectbox("Sélectionnez un secteur", sectors, key="selected_sector")
+        numeric_columns = df_pd.select_dtypes(include=['float64', 'int64']).columns.tolist()
+        if numeric_columns:
+            selected_numeric_column = st.selectbox("Sélectionnez une colonne numérique", numeric_columns, key="numeric_column")
+            if st.button("Détecter les Valeurs Extrêmes par Secteur"):
+                unique_outliers_df = detect_outliers_by_sector(df_pd, sector_column, selected_sector, selected_numeric_column)
+                if not unique_outliers_df.empty:
+                    st.write(f"Valeurs extrêmes uniques dans le secteur '{selected_sector}' pour la colonne '{selected_numeric_column}':")
+                    st.write(unique_outliers_df)
+                else:
+                    st.write(f"Aucune valeur extrême détectée dans le secteur '{selected_sector}' pour la colonne '{selected_numeric_column}'")
+        else:
+            st.warning("Aucune colonne numérique disponible pour la détection des valeurs extrêmes.")
 
 def internal_controls_page(df_pd : pd.DataFrame):
     """Display the Internal Controls page content."""

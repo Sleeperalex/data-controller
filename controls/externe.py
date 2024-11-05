@@ -65,12 +65,11 @@ def verify_date_format(df_pd: pd.DataFrame, date_format: str, match_threshold=0.
     # Check each column
     for col in df_pd.columns:
         # Skip columns likely to be IDs or unnamed columns, or columns without any digits
-        if "id" not in col.lower() and "unnamed" not in col.lower() and not any(char.isdigit() for char in col):
+        if "id" not in col.lower() and "unnamed" not in col.lower() and any(char.isalpha() for char in col):
             # Calculate the proportion of non-null values that match the date format
             match_ratio = df_pd[col].dropna().apply(lambda x: bool(date_regex.match(str(x)))).mean()
-            
-            # Only include columns that meet the match threshold
-            if match_ratio >= match_threshold:
+            # Append the column and match percentage to the results list
+            if match_ratio > 0:
                 results.append({'Column': col, 'Match Percentage': round(match_ratio * 100, 2)})
 
     # Convert results to DataFrame
@@ -81,67 +80,44 @@ def verify_date_format(df_pd: pd.DataFrame, date_format: str, match_threshold=0.
 @st.cache_data
 def data_quality_score(df: pd.DataFrame):
     """Calculate and display the data quality score."""
-    return 100 - round(df.isnull().mean() * 100, 2).mean()
+    dqs = 100 - round(df.isnull().mean() * 100, 2).mean()
+    return dqs
 
-def detect_outliers_by_sector(df: pd.DataFrame):
-    """Detect outliers in a selected numeric column by sector."""
-    st.subheader("Détection des Valeurs Extrêmes par Secteur")
+@st.cache_data
+def detect_outliers_by_sector(df: pd.DataFrame, sector_column: str, selected_sector: str, numeric_column: str) -> pd.DataFrame:
+    """
+    Detects outliers in a specified numeric column by sector and returns a DataFrame 
+    with unique outlier values and their occurrences.
+    """
     
-    # Filter for non-numeric columns that have non-unique values
-    sector_columns = [
-        col for col in df.columns 
-        if df[col].nunique() < len(df) and not pd.api.types.is_numeric_dtype(df[col])
+    # Filter the DataFrame for the selected sector
+    df_sector = df[df[sector_column] == selected_sector]
+    col_data = df_sector[numeric_column]
+
+    # Compute Q1, Q3, and IQR for outlier detection
+    Q1 = col_data.quantile(0.25)
+    Q3 = col_data.quantile(0.75)
+    IQR = Q3 - Q1
+    lower_bound = Q1 - 1.5 * IQR
+    upper_bound = Q3 + 1.5 * IQR
+
+    # Identify outliers
+    outliers = df_sector[
+        (df_sector[numeric_column] < lower_bound) |
+        (df_sector[numeric_column] > upper_bound)
     ]
-    # Let the user select the sector column
-    sector_column = st.selectbox("Sélectionnez la colonne de secteur", sector_columns,key="sector_column")
 
-    if sector_column not in sector_columns:
-        st.write("Aucune colonne de secteur disponible pour la détection des valeurs extrêmes.")
-        return
-    
-    if sector_column in df.columns:
-        sectors = df[sector_column].unique().tolist()
-        selected_sector = st.selectbox("Sélectionnez un secteur", sectors, key="selected_sector")
-        
-        # Get numeric columns
-        numeric_columns = df.select_dtypes(include=['float64', 'int64']).columns.tolist()
-        if numeric_columns:
-            selected_numeric_column = st.selectbox("Sélectionnez une colonne numérique", numeric_columns, key="numeric_column")
-            if st.button("Détecter les Valeurs Extrêmes par Secteur"):
-                # Filter the dataframe for the selected sector
-                df_sector = df[df[sector_column] == selected_sector]
-                col_data = df_sector[selected_numeric_column]
-                
-                # Compute Q1, Q3, IQR
-                Q1 = col_data.quantile(0.25)
-                Q3 = col_data.quantile(0.75)
-                IQR = Q3 - Q1
-                seuil_bas = Q1 - 1.5 * IQR
-                seuil_haut = Q3 + 1.5 * IQR
-                
-                # Identify outliers
-                outliers = df_sector[
-                    (df_sector[selected_numeric_column] < seuil_bas) |
-                    (df_sector[selected_numeric_column] > seuil_haut)
-                ]
-                
-                if not outliers.empty:
-                    # Count occurrences of unique outlier values
-                    unique_outliers = (
-                        outliers[selected_numeric_column]
-                        .value_counts()
-                        .reset_index()
-                        .rename(columns={'index': selected_numeric_column, selected_numeric_column: 'extreme values'})
-                    )
-
-                    st.write(f"Valeurs extrêmes uniques dans le secteur '{selected_sector}' pour la colonne '{selected_numeric_column}':")
-                    st.write(unique_outliers)
-                else:
-                    st.write(f"Aucune valeur extrême détectée dans le secteur '{selected_sector}' pour la colonne '{selected_numeric_column}'")
-        else:
-            st.write("Aucune colonne numérique disponible pour la détection des valeurs extrêmes.")
+    # Count occurrences of unique outlier values
+    if not outliers.empty:
+        unique_outliers = (
+            outliers[numeric_column]
+            .value_counts()
+            .reset_index()
+            .rename(columns={'index': numeric_column, numeric_column: 'extreme values'})
+        )
+        return unique_outliers
     else:
-        st.write(f"La colonne de secteur '{sector_column}' n'existe pas dans le dataset.")
+        return None
 
 def update_frequency(df: pd.DataFrame, date_column):
     """Calculate and display the average update frequency."""
