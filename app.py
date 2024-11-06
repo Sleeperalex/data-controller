@@ -86,7 +86,8 @@ def external_controls_page(df_pd : pd.DataFrame):
         "YYYY.MM.DD", "DD.MM.YYYY", "MM-YYYY", "YYYY"
     ]
     control_format = st.selectbox("Select a date format to check:", date_formats)
-    matched_columns = verify_date_format(df_pd, date_format=control_format)
+    control_column = st.selectbox("Select a column to check:", df_pd.columns)
+    matched_columns = verify_date_format(df_pd,col=control_column, date_format=control_format)
     if not matched_columns.empty:
         st.write(f"Columns following the format '{control_format}':")
         st.write(matched_columns)

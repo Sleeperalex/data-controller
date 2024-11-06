@@ -32,7 +32,7 @@ def number_of_empty_values(df: pd.DataFrame):
     return nofv
 
 @st.cache_data
-def verify_date_format(df_pd: pd.DataFrame, date_format: str) -> pd.DataFrame:
+def verify_date_format(df_pd: pd.DataFrame, col: str, date_format: str) -> pd.DataFrame:
     """
     Identifies columns in the DataFrame that mostly match one of the common date formats and
     returns a DataFrame with the percentage of values matching the format.
@@ -54,7 +54,7 @@ def verify_date_format(df_pd: pd.DataFrame, date_format: str) -> pd.DataFrame:
     # Check if the specified format is supported
     if date_format not in date_patterns:
         st.error(f"Unsupported date format: {date_format}")
-        return pd.DataFrame(columns=['Column', 'Match Percentage'])
+        return None
 
     # Get the regex pattern for the specified date format
     date_regex = date_patterns[date_format]
@@ -62,18 +62,18 @@ def verify_date_format(df_pd: pd.DataFrame, date_format: str) -> pd.DataFrame:
     # List to store columns and match percentages
     results = []
 
-    # Check each column
-    for col in df_pd.columns:
-        # Skip columns likely to be IDs or unnamed columns, or columns without any digits
-        if "id" not in col.lower() and "unnamed" not in col.lower() and any(char.isalpha() for char in col):
-            # Calculate the proportion of non-null values that match the date format
-            match_ratio = df_pd[col].dropna().apply(lambda x: bool(date_regex.match(str(x)))).mean()
-            # Append the column and match percentage to the results list
-            if match_ratio > 0:
-                results.append({'Column': col, 'Match Percentage': round(match_ratio * 100, 2)})
+    # Calculate the proportion of non-null values that match the date format
+    match_ratio = df_pd[col].dropna().apply(lambda x: bool(date_regex.match(str(x)))).mean()
+    # Append the column and match percentage to the results list
+    results.append({'Column': col, 'Match Percentage': round(match_ratio * 100, 2),'Null Values': False})
+
+    match_ratio = df_pd[col].apply(lambda x: bool(date_regex.match(str(x)))).mean()
+    # Append the column and match percentage to the results list
+    results.append({'Column': col, 'Match Percentage': round(match_ratio * 100, 2),'Null Values': True})
+
 
     # Convert results to DataFrame
-    match_df = pd.DataFrame(results, columns=['Column', 'Match Percentage'])
+    match_df = pd.DataFrame(results, columns=['Column', 'Match Percentage','Null Values'])
 
     return match_df
 
