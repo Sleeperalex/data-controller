@@ -114,7 +114,7 @@ def external_controls_page(df_pd: pd.DataFrame, selected_function : str):
                 selected_numeric_column = st.selectbox("Sélectionnez une colonne numérique", numeric_columns, key="numeric_column")
                 if st.button("Détecter les Valeurs Extrêmes par Secteur"):
                     unique_outliers_df = detect_outliers_by_sector(df_pd, sector_column, selected_sector, selected_numeric_column)
-                    if not unique_outliers_df.empty:
+                    if unique_outliers_df is not None:
                         st.write(f"Valeurs extrêmes uniques dans le secteur '{selected_sector}' pour la colonne '{selected_numeric_column}':")
                         st.write(unique_outliers_df)
                     else:
