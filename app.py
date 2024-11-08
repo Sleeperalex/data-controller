@@ -121,6 +121,14 @@ def external_controls_page(df_pd: pd.DataFrame, selected_function : str):
                         st.write(f"Aucune valeur extrême détectée dans le secteur '{selected_sector}' pour la colonne '{selected_numeric_column}'")
             else:
                 st.warning("Aucune colonne numérique disponible pour la détection des valeurs extrêmes.")
+    if selected_function == "Duplicates Columns":
+        st.subheader("Duplicates columns")
+        dc = duplicates_columns(df_pd)
+        if dc.empty == False:
+            st.write(f"Duplicate columns:")
+            st.write(dc)
+        else:
+            st.write("No duplicate columns found.")
 
 def internal_controls_page(df_pd: pd.DataFrame, selected_function: str):
     """Display the Internal Controls page content with subpages."""
@@ -186,7 +194,8 @@ def main():
             "Verify Date Format",
             "Data Quality Score",
             "Basic Information for Numeric Columns",
-            "Detect Outliers"
+            "Detect Outliers",
+            "Duplicates Columns"
         ])
         external_controls_page(df_pd, selected_function)
     with tab2:

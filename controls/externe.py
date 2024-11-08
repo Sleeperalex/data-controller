@@ -119,6 +119,12 @@ def detect_outliers_by_sector(df: pd.DataFrame, sector_column: str, selected_sec
     else:
         return None
 
+@st.cache_data
+def duplicates_columns(df: pd.DataFrame):
+    """Identify and display duplicate columns in a DataFrame."""
+    duplicates = df.columns[df.columns.duplicated()]
+    print(type(duplicates))
+    return duplicates
 
 def update_frequency(df: pd.DataFrame, date_column):
     """Calculate and display the average update frequency."""
