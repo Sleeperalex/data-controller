@@ -123,8 +123,47 @@ def detect_outliers_by_sector(df: pd.DataFrame, sector_column: str, selected_sec
 def duplicates_columns(df: pd.DataFrame):
     """Identify and display duplicate columns in a DataFrame."""
     duplicates = df.columns[df.columns.duplicated()]
-    print(type(duplicates))
     return duplicates
+
+@st.cache_data
+def calculate_deviation_by_country(df: pd.DataFrame, country_column: str, numeric_column: str):  
+    """ 
+    Calculate the mean for each country and compute deviation from it 
+    """
+    country_means = df.groupby(country_column)[numeric_column].transform('mean')
+    deviations = df[numeric_column] - country_means
+
+    result_df = pd.DataFrame({
+        country_column: df[country_column],
+        numeric_column: df[numeric_column],
+        'Country Mean': country_means,
+        'Deviation': deviations
+    })
+
+    return result_df
+
+@st.cache_data
+def show_distribution(df: pd.DataFrame, numeric_column: str):
+    """Plot a histogram of the specified numeric column."""
+    fig = px.histogram(df, x=numeric_column, nbins=500, title=f'Distribution of {numeric_column}')
+    return fig
+
+@st.cache_data
+def esg_data_coverage(df: pd.DataFrame, esg_columns: list) -> pd.Series:
+    """
+    Calculate the coverage of ESG data in each specified column as a percentage.
+    
+    Parameters:
+        df (pd.DataFrame): The DataFrame containing ESG data.
+        esg_columns (list): A list of column names related to ESG metrics.
+    
+    Returns:
+        pd.Series: Series with ESG column names as index and coverage percentage as values.
+    """
+    coverage = {}
+    for col in esg_columns:
+        coverage[col] = 100 * df[col].notna().mean()  # Calculate non-missing values as a percentage
+    return pd.Series(coverage)
 
 def update_frequency(df: pd.DataFrame, date_column):
     """Calculate and display the average update frequency."""

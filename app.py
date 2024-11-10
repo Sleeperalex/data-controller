@@ -61,6 +61,7 @@ def load_file_options(dataset_folder):
 
 def external_controls_page(df_pd: pd.DataFrame, selected_function : str):
     """Display the External Controls page content with subpages."""
+
     # Tab 1: Missing Data
     if selected_function == "Missing Data":
         st.subheader("Missing Data")
@@ -121,6 +122,8 @@ def external_controls_page(df_pd: pd.DataFrame, selected_function : str):
                         st.write(f"Aucune valeur extrême détectée dans le secteur '{selected_sector}' pour la colonne '{selected_numeric_column}'")
             else:
                 st.warning("Aucune colonne numérique disponible pour la détection des valeurs extrêmes.")
+
+    # Tab 6: Duplicates Columns
     if selected_function == "Duplicates Columns":
         st.subheader("Duplicates columns")
         dc = duplicates_columns(df_pd)
@@ -130,6 +133,30 @@ def external_controls_page(df_pd: pd.DataFrame, selected_function : str):
         else:
             st.write("No duplicate columns found.")
 
+    # Tab 7: deviation by country
+    if selected_function == "Deviation by Country":
+        st.subheader("Deviation by Country")
+        country_column = st.selectbox("Select a country column:", df_pd.columns)
+        numeric_column = st.selectbox("Select a numeric column:", df_pd.select_dtypes(include=['int64', 'float64']).columns)
+        deviations = calculate_deviation_by_country(df_pd, country_column, numeric_column)
+        st.write(f"Deviations from the mean by country for {numeric_column}:")
+        st.write(deviations)
+
+    # Tab 8: Show Distribution
+    if selected_function == "Show Distribution":
+        st.subheader("Show Distribution")
+        numeric_column = st.selectbox("Select a numeric column:", df_pd.select_dtypes(include=['int64', 'float64']).columns)
+        st.plotly_chart(show_distribution(df_pd, numeric_column), theme="streamlit")
+
+    # Tab 9: ESG Data Coverage
+    if selected_function == "ESG Data Coverage":
+        st.subheader("ESG Data Coverage")
+        # let the user select the ESG columns they want to check
+        esg_columns = st.multiselect("Select ESG columns to check:", df_pd.columns)
+        esg_coverage = esg_data_coverage(df_pd, esg_columns)
+        st.write(f"ESG Data Coverage:")
+        st.write(esg_coverage)
+
 def internal_controls_page(df_pd: pd.DataFrame, selected_function: str):
     """Display the Internal Controls page content with subpages."""
     # Tab 1: Execution Time
@@ -138,15 +165,11 @@ def internal_controls_page(df_pd: pd.DataFrame, selected_function: str):
         ex_time = execution_time_computation()
         st.write(f"Execution Time: {ex_time:.2f} seconds")
 
-    # Tab 2: Importance Scores
-    if selected_function == "Importance Scores":
-        st.subheader("Importance Scores")
-        importance_scores(df_pd)
-
-    # Tab 3: Dataset Health
-    if selected_function == "Dataset Health":
-        st.subheader("Dataset Health")
-        dataset_health(df_pd)
+    # Tab 2: filter company by score and flag
+    if selected_function == "Filter Company by Score and Flag":
+        st.subheader("Filter Company by Score and Flag")
+        filtered_df = filter_company_by_score_and_flag(df_pd)
+        st.write(filtered_df)
 
 def cleaning_page(df_pd: pd.DataFrame):
     """Display the Cleaning page content."""
@@ -195,7 +218,10 @@ def main():
             "Data Quality Score",
             "Basic Information for Numeric Columns",
             "Detect Outliers",
-            "Duplicates Columns"
+            "Duplicates Columns",
+            "Deviation by Country",
+            "Show Distribution",
+            "ESG Data Coverage"
         ])
         external_controls_page(df_pd, selected_function)
     with tab2:
@@ -208,8 +234,7 @@ def main():
         st.subheader("Internal Controls Settings")  # Sidebar options specific to Internal Controls
         selected_function = st.selectbox("Choose function for Internal Controls", [
             "Execution Time",
-            "Importance Scores",
-            "Dataset Health"
+            "Filter Company by Score and Flag"
         ])
         internal_controls_page(df_pd, selected_function)
     with tab3:
