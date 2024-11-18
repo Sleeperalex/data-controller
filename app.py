@@ -9,6 +9,7 @@ import io
 # Import external and internal control functions
 from controls.externe import *
 from controls.interne import *
+from controls.personalize import *
 
 # Configure Streamlit page
 st.set_page_config(page_title="ESG Data Controller", layout="wide")
@@ -196,6 +197,18 @@ def machine_learning_page(df_pd: pd.DataFrame):
     """Display the Machine Learning page content."""
     st.write("This feature is under development.")
 
+def personalize_controls_page(df_pd: pd.DataFrame, selected_function: str):
+    """Display the Personalize Controls page content."""
+    if selected_function == "custom regex":
+        st.subheader("Custom Regex")
+        regex = st.text_input("Enter the regex pattern:")
+        col = st.selectbox("select the column",df_pd.columns)
+        if check_regex(df_pd,regex,col):
+            st.write("regex is valid for values in column ",col)
+        else:
+            st.write("regex invalid for values in column ",col)
+
+
 def main():
     st.markdown("<h1 style='text-align: center;'>ESG Data Controller</h1>", True)
 
@@ -219,7 +232,7 @@ def main():
         return
 
     # Sidebar page navigation
-    tab1, tab2, tab3, tab4 = st.tabs(["External Controls", "Internal Controls", "Cleaning", "Machine Learning"])
+    tab1, tab2, tab3, tab4, tab5 = st.tabs(["External Controls", "Internal Controls", "Cleaning", "Machine Learning", "Personalize Controls"])
 
     with tab1:
         # Display dataset preview
@@ -260,6 +273,13 @@ def main():
     with tab4:
         st.markdown("<h1 style='text-align: center;'>Machine Learning</h1>", True)
         st.write("This feature is under development.")
+    with tab5:
+        st.markdown("<h1 style='text-align: center;'>Personalize Controls</h1>", True)
+        selected_function = st.selectbox("Choose function for Personalize Controls", [
+            "custom regex"
+        ])
+        personalize_controls_page(df_pd, selected_function)
+
 
 if __name__ == "__main__":
     main()
