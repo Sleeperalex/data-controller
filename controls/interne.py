@@ -21,7 +21,7 @@ def esg_data_coverage(df: pd.DataFrame, esg_columns: list):
         coverage[col] = 100 * df[col].notna().mean()  # Calculate non-missing values as a percentage
     return coverage.T
 
-
+@st.cache_data
 def filter_company_by_score_and_flag(df: pd.DataFrame,required_columns, score_summary, flag_summary) -> pd.DataFrame:
     """
     Filter companies with a SCORE_SUMMARY of 10 and a FLAG_SUMMARY of 'Green'.
@@ -40,6 +40,7 @@ def filter_company_by_score_and_flag(df: pd.DataFrame,required_columns, score_su
     filtered_df = df[(df[required_columns[1]] == score_summary) & (df[required_columns[2]] == flag_summary)]
     return filtered_df[required_columns]
 
+@st.cache_data
 def check_column_names(df: pd.DataFrame, columns_to_check):
     """
     Vérifie que les noms de colonnes ne contiennent pas d'espaces ou de caractères spéciaux non permis.
