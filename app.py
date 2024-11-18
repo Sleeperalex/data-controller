@@ -146,30 +146,47 @@ def external_controls_page(df_pd: pd.DataFrame, selected_function : str):
     if selected_function == "Show Distribution":
         st.subheader("Show Distribution")
         numeric_column = st.selectbox("Select a numeric column:", df_pd.select_dtypes(include=['int64', 'float64']).columns)
-        st.plotly_chart(show_distribution(df_pd, numeric_column), theme="streamlit")
+        fig = px.histogram(df_pd, x=numeric_column, nbins=500, title=f'Distribution of {numeric_column}')
+        st.plotly_chart(fig, theme="streamlit")
 
-    # Tab 9: ESG Data Coverage
+def internal_controls_page(df_pd: pd.DataFrame, selected_function: str):
+    """Display the Internal Controls page content with subpages."""
+    # Tab 1: ESG Data Coverage
     if selected_function == "ESG Data Coverage":
         st.subheader("ESG Data Coverage")
         # let the user select the ESG columns they want to check
         esg_columns = st.multiselect("Select ESG columns to check:", df_pd.columns)
         esg_coverage = esg_data_coverage(df_pd, esg_columns)
+        fig = px.histogram(esg_coverage, x=esg_coverage["ESG Data Coverage"], nbins=100, title=f'Distribution of ESG Data Coverage for selected columns')
+        st.plotly_chart(fig, theme="streamlit")
         st.write(f"ESG Data Coverage:")
         st.write(esg_coverage)
-
-def internal_controls_page(df_pd: pd.DataFrame, selected_function: str):
-    """Display the Internal Controls page content with subpages."""
-    # Tab 1: Execution Time
-    if selected_function == "Execution Time":
-        st.subheader("Execution Time")
-        ex_time = execution_time_computation()
-        st.write(f"Execution Time: {ex_time:.2f} seconds")
 
     # Tab 2: filter company by score and flag
     if selected_function == "Filter Company by Score and Flag":
         st.subheader("Filter Company by Score and Flag")
-        filtered_df = filter_company_by_score_and_flag(df_pd)
-        st.write(filtered_df)
+        required_columns = ["COMPANY_NAME_MNS", "SCORE_SUMMARY", "FLAG_SUMMARY"]
+        if all(col in df_pd.columns for col in required_columns):
+            # let the user write the score and flag they want to filter by
+            score_summary = st.text_input("Enter the score summary to filter by:")
+            flag_summary = st.text_input("Enter the flag summary to filter by:")
+            if not score_summary.isdigit() or not flag_summary.isalpha():
+                st.error("Please enter valid score and flag summaries.")
+            else:
+                filtered_df = filter_company_by_score_and_flag(df_pd,required_columns, int(score_summary), flag_summary)
+                st.write(filtered_df)
+        else:
+            st.error("Required columns not found in the DataFrame.")
+
+    # Tab 3: Check Column Names
+    if selected_function == "Check Column Names":
+        st.subheader("Check Column Names")
+        columns_to_check = st.multiselect("Select columns to check:", df_pd.columns)
+        invalid_columns = check_column_names(df_pd, columns_to_check)
+        if len(invalid_columns) > 0:
+            st.write(f"Invalid column names: {', '.join(invalid_columns)}")
+        else:
+            st.write("All column names are valid.")
 
 def cleaning_page(df_pd: pd.DataFrame):
     """Display the Cleaning page content."""
@@ -220,8 +237,7 @@ def main():
             "Detect Outliers",
             "Duplicates Columns",
             "Deviation by Country",
-            "Show Distribution",
-            "ESG Data Coverage"
+            "Show Distribution"
         ])
         external_controls_page(df_pd, selected_function)
     with tab2:
@@ -233,8 +249,9 @@ def main():
         st.markdown("<h1 style='text-align: center;'>Internal Controls</h1>", True)
         st.subheader("Internal Controls Settings")  # Sidebar options specific to Internal Controls
         selected_function = st.selectbox("Choose function for Internal Controls", [
-            "Execution Time",
-            "Filter Company by Score and Flag"
+            "ESG Data Coverage",
+            "Filter Company by Score and Flag",
+            "Check Column Names"
         ])
         internal_controls_page(df_pd, selected_function)
     with tab3:

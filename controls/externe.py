@@ -142,33 +142,3 @@ def calculate_deviation_by_country(df: pd.DataFrame, country_column: str, numeri
 
     return result_df
 
-@st.cache_data
-def show_distribution(df: pd.DataFrame, numeric_column: str):
-    """Plot a histogram of the specified numeric column."""
-    fig = px.histogram(df, x=numeric_column, nbins=500, title=f'Distribution of {numeric_column}')
-    return fig
-
-@st.cache_data
-def esg_data_coverage(df: pd.DataFrame, esg_columns: list) -> pd.Series:
-    """
-    Calculate the coverage of ESG data in each specified column as a percentage.
-    
-    Parameters:
-        df (pd.DataFrame): The DataFrame containing ESG data.
-        esg_columns (list): A list of column names related to ESG metrics.
-    
-    Returns:
-        pd.Series: Series with ESG column names as index and coverage percentage as values.
-    """
-    coverage = {}
-    for col in esg_columns:
-        coverage[col] = 100 * df[col].notna().mean()  # Calculate non-missing values as a percentage
-    return pd.Series(coverage)
-
-def update_frequency(df: pd.DataFrame, date_column):
-    """Calculate and display the average update frequency."""
-    st.subheader("Update Frequency")
-    df[date_column] = pd.to_datetime(df[date_column])
-    update_frequency = df[date_column].diff().mean()
-    st.write(f"Average Update Frequency: {update_frequency}")
-    return update_frequency
