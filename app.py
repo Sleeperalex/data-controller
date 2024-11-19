@@ -11,6 +11,9 @@ from controls.externe import *
 from controls.interne import *
 from controls.personalize import *
 
+# import cleaning functions
+from clean.clean import *
+
 # Configure Streamlit page
 st.set_page_config(page_title="ESG Data Controller", layout="wide")
 
@@ -191,7 +194,36 @@ def internal_controls_page(df_pd: pd.DataFrame, selected_function: str):
 
 def cleaning_page(df_pd: pd.DataFrame):
     """Display the Cleaning page content."""
-    st.write("This feature is under development.")
+    st.subheader("Data Cleaning Operations")
+
+    # Create checkboxes for cleaning options
+    fm = st.checkbox("Fill Missing Values")
+    rd = st.checkbox("Remove Duplicates Rows")
+    col1, col2 = st.columns(2)
+    cd = col1.checkbox("Convert Date to Datetime")
+    col = col2.selectbox("Select a column to convert to datetime", df_pd.columns)
+
+    # Create an "Apply" button to execute selected operations
+    if st.button("Apply Cleaning"):
+        modified_df = df_pd.copy()  # Ensure the original DataFrame is not altered
+        
+        if fm:
+            modified_df = fill_missing_values(modified_df)
+            st.write("Missing values filled successfully.")
+        
+        if rd:
+            modified_df = remove_duplicates(modified_df)
+            st.write("Duplicates removed successfully.")
+
+        if cd:
+            modified_df = convert_to_datetime(modified_df,col)
+            st.write("Date converted to datetime successfully.")
+        
+        
+        st.write("Cleaned Data:")
+        st.write(modified_df)
+
+
 
 def machine_learning_page(df_pd: pd.DataFrame):
     """Display the Machine Learning page content."""
