@@ -223,8 +223,6 @@ def cleaning_page(df_pd: pd.DataFrame):
         st.write("Cleaned Data:")
         st.write(modified_df)
 
-
-
 def machine_learning_page(df_pd: pd.DataFrame):
     """Display the Machine Learning page content."""
     st.write("This feature is under development.")
