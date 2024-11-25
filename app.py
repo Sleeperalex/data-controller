@@ -155,18 +155,8 @@ def external_controls_page(df_pd: pd.DataFrame, selected_function : str):
 
 def internal_controls_page(df_pd: pd.DataFrame, selected_function: str):
     """Display the Internal Controls page content with subpages."""
-    # Tab 1: ESG Data Coverage
-    if selected_function == "ESG Data Coverage":
-        st.subheader("ESG Data Coverage")
-        # let the user select the ESG columns they want to check
-        esg_columns = st.multiselect("Select ESG columns to check:", df_pd.columns)
-        esg_coverage = esg_data_coverage(df_pd, esg_columns)
-        fig = px.histogram(esg_coverage, x=esg_coverage["ESG Data Coverage"], nbins=100, title=f'Distribution of ESG Data Coverage for selected columns')
-        st.plotly_chart(fig, theme="streamlit")
-        st.write(f"ESG Data Coverage:")
-        st.write(esg_coverage)
 
-    # Tab 2: filter company by score and flag
+    # Tab 1: filter company by score and flag
     if selected_function == "Filter Company by Score and Flag":
         st.subheader("Filter Company by Score and Flag")
         required_columns = ["COMPANY_NAME_MNS", "SCORE_SUMMARY", "FLAG_SUMMARY"]
@@ -182,11 +172,10 @@ def internal_controls_page(df_pd: pd.DataFrame, selected_function: str):
         else:
             st.error("Required columns not found in the DataFrame.")
 
-    # Tab 3: Check Column Names
+    # Tab 2: Check Column Names
     if selected_function == "Check Column Names":
         st.subheader("Check Column Names")
-        columns_to_check = st.multiselect("Select columns to check:", df_pd.columns)
-        invalid_columns = check_column_names(df_pd, columns_to_check)
+        invalid_columns = check_column_names(df_pd)
         if len(invalid_columns) > 0:
             st.write(f"Invalid column names: {', '.join(invalid_columns)}")
         else:
@@ -197,7 +186,6 @@ def cleaning_page(df_pd: pd.DataFrame):
     st.subheader("Data Cleaning Operations")
 
     # Create checkboxes for cleaning options
-    fm = st.checkbox("Fill Missing Values")
     rd = st.checkbox("Remove Duplicates Rows")
     col1, col2 = st.columns(2)
     cd = col1.checkbox("Convert Date to Datetime")
@@ -206,10 +194,6 @@ def cleaning_page(df_pd: pd.DataFrame):
     # Create an "Apply" button to execute selected operations
     if st.button("Apply Cleaning"):
         modified_df = df_pd.copy()  # Ensure the original DataFrame is not altered
-        
-        if fm:
-            modified_df = fill_missing_values(modified_df)
-            st.write("Missing values filled successfully.")
         
         if rd:
             modified_df = remove_duplicates(modified_df)
@@ -229,7 +213,7 @@ def machine_learning_page(df_pd: pd.DataFrame):
 
 def personalize_controls_page(df_pd: pd.DataFrame, selected_function: str):
     """Display the Personalize Controls page content."""
-    if selected_function == "custom regex":
+    if selected_function == "custom regex values":
         st.subheader("Custom Regex")
         regex = st.text_input("Enter the regex pattern:")
         col = st.selectbox("select the column",df_pd.columns)
@@ -237,6 +221,15 @@ def personalize_controls_page(df_pd: pd.DataFrame, selected_function: str):
             st.write("regex is valid for values in column ",col)
         else:
             st.write("regex invalid for values in column ",col)
+
+    if selected_function == "custom regex column":
+        st.subheader("Custom Regex")
+        regex = st.text_input("Enter the regex pattern:")
+        col = st.selectbox("select the column",df_pd.columns)
+        if check_regex(df_pd,regex,col):
+            st.write("regex is valid for column name ",col)
+        else:
+            st.write("regex invalid for column name ",col)
 
 
 def main():
@@ -292,7 +285,6 @@ def main():
         st.markdown("<h1 style='text-align: center;'>Internal Controls</h1>", True)
         st.subheader("Internal Controls Settings")  # Sidebar options specific to Internal Controls
         selected_function = st.selectbox("Choose function for Internal Controls", [
-            "ESG Data Coverage",
             "Filter Company by Score and Flag",
             "Check Column Names"
         ])
@@ -306,7 +298,8 @@ def main():
     with tab5:
         st.markdown("<h1 style='text-align: center;'>Personalize Controls</h1>", True)
         selected_function = st.selectbox("Choose function for Personalize Controls", [
-            "custom regex"
+            "custom regex values",
+            "custom regex column"
         ])
         personalize_controls_page(df_pd, selected_function)
 
