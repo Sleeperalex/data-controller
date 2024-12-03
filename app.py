@@ -255,7 +255,7 @@ def main():
         return
 
     # Sidebar page navigation
-    tab1, tab2, tab3, tab4, tab5 = st.tabs(["External Controls", "Internal Controls", "Cleaning", "Machine Learning", "Personalize Controls"])
+    tab, tab1, tab2, tab3, tab4, tab5 = st.tabs(["Data Summary","External Controls", "Internal Controls", "Cleaning", "Machine Learning", "Personalize Controls"])
 
     with tab1:
         # Display dataset preview
@@ -302,6 +302,10 @@ def main():
             "custom regex column"
         ])
         personalize_controls_page(df_pd, selected_function)
+    with tab:
+        from pygwalker.api.streamlit import StreamlitRenderer
+        renderer = StreamlitRenderer(df_pd)
+        renderer.explorer()
 
 
 if __name__ == "__main__":
