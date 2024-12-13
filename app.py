@@ -12,7 +12,7 @@ from controls.externe import *
 from controls.interne import *
 from controls.personalize import *
 
-# import cleaning functions
+# Import cleaning functions
 from clean.clean import *
 
 # Configure Streamlit page
