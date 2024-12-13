@@ -1,0 +1,5 @@
+.venv
+/temp/
+/controls/__pycache__/
+/clean/__pycache__/
+*.csv
