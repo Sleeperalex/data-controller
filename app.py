@@ -18,6 +18,10 @@ from clean.clean import *
 # Configure Streamlit page
 st.set_page_config(page_title="ESG Data Controller", layout="wide")
 
+@st.cache_resource
+def get_pyg_renderer(df) -> StreamlitRenderer:
+    return StreamlitRenderer(df,kernel_computation=True)
+
 @st.cache_data
 def load_data(file_path=None, uploaded_file=None) -> pd.DataFrame:
     """Load data from a CSV file or an uploaded file and cache the result."""
@@ -254,7 +258,8 @@ def main():
     else:
         st.error("Please upload a file or select one from the folder.")
         return
-    renderer = StreamlitRenderer(df_pd)
+
+    renderer = get_pyg_renderer(df_pd)
 
     # Sidebar page navigation
     tab, tab1, tab2, tab3, tab4, tab5 = st.tabs(["Data Summary","External Controls", "Internal Controls", "Cleaning", "Machine Learning", "Personalize Controls"])
