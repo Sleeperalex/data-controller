@@ -5,6 +5,7 @@ import pandas as pd
 import os
 from collections import Counter
 import io
+from pygwalker.api.streamlit import StreamlitRenderer
 
 # Import external and internal control functions
 from controls.externe import *
@@ -253,6 +254,7 @@ def main():
     else:
         st.error("Please upload a file or select one from the folder.")
         return
+    renderer = StreamlitRenderer(df_pd)
 
     # Sidebar page navigation
     tab, tab1, tab2, tab3, tab4, tab5 = st.tabs(["Data Summary","External Controls", "Internal Controls", "Cleaning", "Machine Learning", "Personalize Controls"])
@@ -303,8 +305,6 @@ def main():
         ])
         personalize_controls_page(df_pd, selected_function)
     with tab:
-        from pygwalker.api.streamlit import StreamlitRenderer
-        renderer = StreamlitRenderer(df_pd)
         renderer.explorer()
 
 
