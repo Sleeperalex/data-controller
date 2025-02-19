@@ -6,11 +6,13 @@ import os
 from collections import Counter
 import io
 from pygwalker.api.streamlit import StreamlitRenderer
+from transformers import pipeline
 
 # Import external and internal control functions
 from controls.externe import *
 from controls.interne import *
 from controls.personalize import *
+from MA.machine_learning import *
 
 # Import cleaning functions
 from clean.clean import *
@@ -216,6 +218,28 @@ def machine_learning_page(df_pd: pd.DataFrame):
     """Display the Machine Learning page content."""
     st.write("This feature is under development.")
 
+    # PDF extraction
+    st.subheader("PDF Text Extraction")
+    uploaded_pdf = st.file_uploader("Upload PDF File", type="pdf")
+
+    if uploaded_pdf is not None:
+        # Extract text from the uploaded PDF
+        extracted_text = extract_pdf_text(uploaded_pdf)
+        ner_pipeline = pipeline("ner", grouped_entities=True)
+        text = extracted_text
+        entities = ner_pipeline(text)
+        df_entities = pd.DataFrame(entities)
+        st.dataframe(df_entities)
+
+    # Option to upload a PDF from local file path
+    file_path = st.text_input("Enter file path for local PDF extraction")
+    if file_path:
+        if os.path.exists(file_path) and file_path.endswith(".pdf"):
+            extracted_text_local = extract_pdf_from_local(file_path)
+            st.text_area("Extracted Text from Local File", extracted_text_local, height=300)
+        else:
+            st.error("Invalid file path or file is not a PDF.")
+
 def personalize_controls_page(df_pd: pd.DataFrame, selected_function: str):
     """Display the Personalize Controls page content."""
     if selected_function == "custom regex values":
@@ -301,7 +325,7 @@ def main():
         cleaning_page(df_pd)
     with tab4:
         st.markdown("<h1 style='text-align: center;'>Machine Learning</h1>", True)
-        st.write("This feature is under development.")
+        machine_learning_page(df_pd)
     with tab5:
         st.markdown("<h1 style='text-align: center;'>Personalize Controls</h1>", True)
         selected_function = st.selectbox("Choose function for Personalize Controls", [
