@@ -2,4 +2,5 @@
 /temp/
 /controls/__pycache__/
 /clean/__pycache__/
+/other_project/__pycache__/
 *.csv
