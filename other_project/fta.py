@@ -99,6 +99,7 @@ def main():
         return df[df['volume'] > thresholds['volume_multiplier'] * avg_volume]
 
     def detect_pe_anomalies(df):
+        df['trailing_pe'] = pd.to_numeric(df['trailing_pe'], errors='coerce')
         return df[df['trailing_pe'] > thresholds['pe_threshold']]
 
     # Process Tickers & Fetch Data if uploaded
