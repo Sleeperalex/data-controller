@@ -1,0 +1,134 @@
+import streamlit as st
+import pandas as pd
+import numpy as np
+import yfinance as yf
+import plotly.graph_objects as go
+import yaml
+import os
+import sys
+sys.path.append(os.path.join(os.path.dirname(__file__)))
+
+import load_data
+
+def main():
+    # Load configuration
+    CONFIG_FILE = "other_project/config.yaml"
+    DEFAULT_CONFIG = {
+        "thresholds": {
+            "price_variation": 5.0,
+            "volume_multiplier": 2.0,
+            "pe_threshold": 40.0,
+            "volatility_threshold": 0.1,
+            "market_cap_threshold": 0.1,
+            "environmental_threshold": 5.0,
+            "governance_threshold": 3.0,
+            "dividend_threshold": 0.2,
+            "eps_threshold": -0.1
+        }
+    }
+
+    def load_config():
+        if not os.path.exists(CONFIG_FILE):
+            save_config(DEFAULT_CONFIG)
+            return DEFAULT_CONFIG
+        with open(CONFIG_FILE, "r") as file:
+            return yaml.safe_load(file) or DEFAULT_CONFIG
+
+    def save_config(config):
+        with open(CONFIG_FILE, "w") as file:
+            yaml.dump(config, file)
+
+    config = load_config()
+    thresholds = config["thresholds"]
+
+    # Streamlit App
+    st.title("Finance Alerting System")
+
+    # File Upload
+    st.header("Upload Data Files")
+    ticker_file = st.file_uploader("Upload Ticker CSV", type=["csv"])
+    controversy_file = st.file_uploader("Upload Controversy CSV", type=["csv"])
+
+    tickers, controverses = None, None
+    if ticker_file:
+        tickers = pd.read_csv(ticker_file, sep=";")
+        st.write("### Ticker Data", tickers.head())
+
+    if controversy_file:
+        controverses = pd.read_csv(controversy_file, sep=";")
+        st.write("### Controversy Data", controverses.head())
+
+    tickers, controverses = load_data.transformer(tickers, controverses)
+
+    # User Stock Input
+    user_ticker = st.text_input("Enter a stock ticker (e.g., AAPL, TSLA):")
+    if user_ticker:
+        stock = yf.Ticker(user_ticker)
+        stock_hist = stock.history(period="1y")
+        if not stock_hist.empty:
+            st.write(f"### Historical Data for {user_ticker}", stock_hist.tail(10))
+            st.line_chart(stock_hist['Close'])
+            
+            recent_close, previous_close = stock_hist['Close'].iloc[-1], stock_hist['Close'].iloc[-2]
+            if (previous_close - recent_close) / previous_close > thresholds['price_variation'] / 100:
+                st.error(f"Alert: {user_ticker} dropped more than {thresholds['price_variation']}% today!")
+            else:
+                st.success("No major alerts detected.")
+        else:
+            st.error("Invalid ticker or no data available.")
+
+    # Anomaly Detection Functions
+    def detect_price_anomalies(df):
+        df['price_change'] = df['previous_close'].pct_change() * 100
+        return df[abs(df['price_change']) > thresholds['price_variation']]
+
+    def detect_volume_anomalies(df, avg_volume):
+        return df[df['volume'] > thresholds['volume_multiplier'] * avg_volume]
+
+    def detect_pe_anomalies(df):
+        return df[df['trailing_pe'] > thresholds['pe_threshold']]
+
+    # Process Tickers & Fetch Data if uploaded
+    if controverses is not None:
+        valid_tickers = controverses['Tickers'].dropna().tolist()
+        controverses['price_change'] = None
+        controverses['volume'] = None
+        controverses['trailing_pe'] = None
+        for i, ticker in enumerate(valid_tickers[:50]):
+            try:
+                stock = yf.Ticker(ticker)
+                info = stock.info
+                controverses.loc[i, 'price_change'] = info.get('regularMarketPreviousClose', 0)
+                controverses.loc[i, 'volume'] = info.get('volume', 0)
+                controverses.loc[i, 'trailing_pe'] = info.get('trailingPE', 0)
+            except:
+                continue
+        
+        avg_volume = controverses['volume'].mean()
+        anomalies_price = detect_price_anomalies(controverses)
+        anomalies_volume = detect_volume_anomalies(controverses, avg_volume)
+        anomalies_pe = detect_pe_anomalies(controverses)
+        
+        st.write("### Anomalies Detected")
+        st.write("#### Price Anomalies", anomalies_price)
+        st.write("#### Volume Anomalies", anomalies_volume)
+        st.write("#### P/E Ratio Anomalies", anomalies_pe)
+
+        # Charts
+        st.subheader("Visualization of Anomalies")
+        fig = go.Figure()
+        fig.add_trace(go.Bar(x=anomalies_price['Tickers'], y=anomalies_price['price_change'], name="Price Anomalies"))
+        fig.add_trace(go.Bar(x=anomalies_volume['Tickers'], y=anomalies_volume['volume'], name="Volume Anomalies"))
+        fig.add_trace(go.Bar(x=anomalies_pe['Tickers'], y=anomalies_pe['trailing_pe'], name="P/E Anomalies"))
+        st.plotly_chart(fig)
+
+        # Save Filtered Data
+        controverses.to_csv('controverses_filtered.csv', index=False, sep=";", encoding="utf-8")
+        st.success("Filtered data saved as controverses_filtered.csv")
+
+    # Config Adjustments
+    st.header("Set Anomaly Thresholds")
+    config['thresholds']['price_variation'] = st.slider("Price Variation (%)", 1, 10, int(thresholds['price_variation']))
+    config['thresholds']['volume_multiplier'] = st.slider("Volume Multiplier", 1, 5, int(thresholds['volume_multiplier']))
+    config['thresholds']['pe_threshold'] = st.slider("P/E Threshold", 10, 100, int(thresholds['pe_threshold']))
+    save_config(config)

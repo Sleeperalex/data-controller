@@ -142,3 +142,18 @@ def calculate_deviation_by_country(df: pd.DataFrame, country_column: str, numeri
 
     return result_df
 
+@st.cache_data
+def apply_custom_threshold(df, column, threshold, operator):
+    """Application des seuils personnalisés sur un champ donné."""
+    if operator == "<":
+        return df[df[column] < threshold]
+    elif operator == ">":
+        return df[df[column] > threshold]
+    elif operator == "<=":
+        return df[df[column] <= threshold]
+    elif operator == ">=":
+        return df[df[column] >= threshold]
+    elif operator == "=":
+        return df[df[column] == threshold]
+    else:
+        return df  # Si l'opérateur est invalide, on renvoie le dataset inchangé

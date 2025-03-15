@@ -1,0 +1,6 @@
+thresholds:
+  market_cap_threshold: 0.1
+  pe_threshold: 40
+  price_variation: 5
+  volatility_threshold: 0.1
+  volume_multiplier: 2

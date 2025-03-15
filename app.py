@@ -17,8 +17,11 @@ from MA.machine_learning import *
 # Import cleaning functions
 from clean.clean import *
 
+# Import modules for Financial Analysis Tool
+from other_project import fta
+
 # Configure Streamlit page
-st.set_page_config(page_title="ESG Data Controller", layout="wide")
+st.set_page_config(page_title="Data Analysis Tool", layout="wide")
 
 @st.cache_resource
 def get_pyg_renderer(df) -> StreamlitRenderer:
@@ -66,9 +69,9 @@ def detect_index_column(data_file, delimiter) -> int:
             return col_index
     return None
 
-def load_file_options(dataset_folder):
+def load_file_options(folder_path):
     """Get available CSV file options from the dataset folder."""
-    return [f for f in os.listdir(dataset_folder) if f.endswith('.csv')]
+    return [f for f in os.listdir(folder_path) if f.endswith('.csv')]
 
 def external_controls_page(df_pd: pd.DataFrame, selected_function : str):
     """Display the External Controls page content with subpages."""
@@ -160,6 +163,18 @@ def external_controls_page(df_pd: pd.DataFrame, selected_function : str):
         fig = px.histogram(df_pd, x=numeric_column, nbins=500, title=f'Distribution of {numeric_column}')
         st.plotly_chart(fig, theme="streamlit")
 
+    # Tab 9: Apply Custom Threshold
+    if selected_function == "Apply Custom Threshold":
+        st.subheader("Apply Custom Threshold")
+        column = st.selectbox("Select a numeric column:", df_pd.select_dtypes(include=['int64', 'float64']).columns, key="threshold_column")
+        operator = st.selectbox("Select Operator:", ["<", ">", "<=", ">=", "="], key="threshold_operator")
+        threshold = st.number_input(f"Enter threshold for {column}:", key="threshold_value")
+
+        if st.button("Apply Threshold"):
+            filtered_df = apply_custom_threshold(df_pd, column, threshold, operator)
+            st.write(f"Filtered Data: `{column} {operator} {threshold}`")
+            st.dataframe(filtered_df, height=400)  # Optimize Data Display
+
 def internal_controls_page(df_pd: pd.DataFrame, selected_function: str):
     """Display the Internal Controls page content with subpages."""
 
@@ -187,6 +202,11 @@ def internal_controls_page(df_pd: pd.DataFrame, selected_function: str):
             st.write(f"Invalid column names: {', '.join(invalid_columns)}")
         else:
             st.write("All column names are valid.")
+
+    # Tab 3: Check dimensions of datasets
+    if selected_function == "Check dimensions of datasets":
+        st.subheader("Check dimensions of datasets")
+        st.write("This feature is under development.")
 
 def cleaning_page(df_pd: pd.DataFrame):
     """Display the Cleaning page content."""
@@ -261,12 +281,11 @@ def personalize_controls_page(df_pd: pd.DataFrame, selected_function: str):
             st.write("regex invalid for column name ",col)
 
 
-def main():
+def esg_data_controller():
     st.markdown("<h1 style='text-align: center;'>ESG Data Controller</h1>", True)
 
     # Specify dataset folder
-    dataset_folder = 'datasets'
-    csv_files = load_file_options(dataset_folder) if os.path.exists(dataset_folder) else []
+    csv_files = load_file_options('datasets') if os.path.exists('datasets') else []
     
     # File selection
     uploaded_file = st.sidebar.file_uploader("Or Upload a CSV file", type="csv")
@@ -277,7 +296,7 @@ def main():
         df_pd = load_data(uploaded_file=uploaded_file)
         st.success("CSV file uploaded successfully!")
     elif selected_file:
-        file_path = os.path.join(dataset_folder, selected_file)
+        file_path = os.path.join('datasets', selected_file)
         df_pd = load_data(file_path=file_path)
     else:
         st.error("Please upload a file or select one from the folder.")
@@ -286,9 +305,11 @@ def main():
     renderer = get_pyg_renderer(df_pd)
 
     # Sidebar page navigation
-    tab, tab1, tab2, tab3, tab4, tab5 = st.tabs(["Data Summary","External Controls", "Internal Controls", "Cleaning", "Machine Learning", "Personalize Controls"])
+    tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs(["Data Summary","External Controls", "Internal Controls", "Cleaning", "Machine Learning", "Personalize Controls"])
 
     with tab1:
+        renderer.explorer()
+    with tab2:
         # Display dataset preview
         st.write("Dataset Preview:")
         st.dataframe(df_pd.head(100),height=300)
@@ -304,10 +325,11 @@ def main():
             "Detect Outliers",
             "Duplicates Columns",
             "Deviation by Country",
-            "Show Distribution"
+            "Show Distribution",
+            "Apply Custom Threshold"
         ])
         external_controls_page(df_pd, selected_function)
-    with tab2:
+    with tab3:
         # Display dataset preview
         st.write("Dataset Preview:")
         st.dataframe(df_pd.head(100),height=300)
@@ -317,25 +339,39 @@ def main():
         st.subheader("Internal Controls Settings")  # Sidebar options specific to Internal Controls
         selected_function = st.selectbox("Choose function for Internal Controls", [
             "Filter Company by Score and Flag",
-            "Check Column Names"
+            "Check Column Names",
+            "Check dimensions of datasets"
         ])
         internal_controls_page(df_pd, selected_function)
-    with tab3:
+    with tab4:
         st.markdown("<h1 style='text-align: center;'>Cleaning</h1>", True)
         cleaning_page(df_pd)
-    with tab4:
+    with tab5:
         st.markdown("<h1 style='text-align: center;'>Machine Learning</h1>", True)
         machine_learning_page(df_pd)
-    with tab5:
+    with tab6:
         st.markdown("<h1 style='text-align: center;'>Personalize Controls</h1>", True)
         selected_function = st.selectbox("Choose function for Personalize Controls", [
             "custom regex values",
             "custom regex column"
         ])
         personalize_controls_page(df_pd, selected_function)
-    with tab:
-        renderer.explorer()
 
+
+
+def financial_analysis_tool():
+    """Financial Analysis functionalities."""
+    st.markdown("<h1 style='text-align: center;'>Financial Analysis Tool</h1>", True)
+    fta.main()
+
+def main():
+    # Sidebar: Project Selection
+    project_choice = st.sidebar.radio("Select a Project:", ["ESG Data Controller", "Financial Analysis Tool"])
+    if project_choice == "ESG Data Controller":
+        esg_data_controller()
+    elif project_choice == "Financial Analysis Tool":
+        financial_analysis_tool()
 
 if __name__ == "__main__":
+    st.write("Select a project from the sidebar.")
     main()
