@@ -3,7 +3,6 @@ import pandas as pd
 import numpy as np
 import yfinance as yf
 import plotly.graph_objects as go
-import yaml
 import os
 import sys
 sys.path.append(os.path.join(os.path.dirname(__file__)))
