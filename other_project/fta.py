@@ -33,13 +33,23 @@ def main():
 
     transformed_datasets_folder = "transformed_datasets"
 
-    if transformed_datasets_folder in os.listdir():
-        tickers = pd.read_csv(transformed_datasets_folder+'/tickers.csv', sep=";")
-        controverses = pd.read_csv(transformed_datasets_folder+'/controverses.csv', sep=";")
+    # Check if the folder exists, if not create it
+    if not os.path.exists(transformed_datasets_folder):
+        os.makedirs(transformed_datasets_folder)
+        print(f"Created directory: {transformed_datasets_folder}")
+
+    # Check if transformed datasets already exist
+    if os.path.isfile(f"{transformed_datasets_folder}/tickers.csv") and os.path.isfile(f"{transformed_datasets_folder}/controverses.csv"):
+        tickers = pd.read_csv(f"{transformed_datasets_folder}/tickers.csv", sep=";")
+        controverses = pd.read_csv(f"{transformed_datasets_folder}/controverses.csv", sep=";")
+        print("Loaded existing transformed datasets")
     else:
+        # Transform the datasets
         tickers, controverses = load_data.transformer(tickers, controverses)
-        tickers.to_csv(transformed_datasets_folder+'/tickers.csv')
-        controverses.to_csv(transformed_datasets_folder+'/controverses.csv')
+        
+        # Save the transformed datasets
+        tickers.to_csv(f"{transformed_datasets_folder}/tickers.csv", sep=";")
+        controverses.to_csv(f"{transformed_datasets_folder}/controverses.csv", sep=";")
 
     ####################### Default threshold values #######################
     thresholds = {
