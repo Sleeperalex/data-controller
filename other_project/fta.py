@@ -11,35 +11,6 @@ sys.path.append(os.path.join(os.path.dirname(__file__)))
 import load_data
 
 def main():
-    # Load configuration
-    CONFIG_FILE = "other_project/config.yaml"
-    DEFAULT_CONFIG = {
-        "thresholds": {
-            "price_variation": 5.0,
-            "volume_multiplier": 2.0,
-            "pe_threshold": 40.0,
-            "volatility_threshold": 0.1,
-            "market_cap_threshold": 0.1,
-            "environmental_threshold": 5.0,
-            "governance_threshold": 3.0,
-            "dividend_threshold": 0.2,
-            "eps_threshold": -0.1
-        }
-    }
-
-    def load_config():
-        if not os.path.exists(CONFIG_FILE):
-            save_config(DEFAULT_CONFIG)
-            return DEFAULT_CONFIG
-        with open(CONFIG_FILE, "r") as file:
-            return yaml.safe_load(file) or DEFAULT_CONFIG
-
-    def save_config(config):
-        with open(CONFIG_FILE, "w") as file:
-            yaml.dump(config, file)
-
-    config = load_config()
-    thresholds = config["thresholds"]
 
     # Streamlit App
     st.title("Finance Alerting System")
@@ -58,9 +29,41 @@ def main():
         controverses = pd.read_csv(controversy_file, sep=";")
         st.write("### Controversy Data", controverses.head())
 
-    tickers, controverses = load_data.transformer(tickers, controverses)
+    ######################### Transformation ###############################
 
-    # User Stock Input
+    transformed_datasets_folder = "transformed_datasets"
+
+    if transformed_datasets_folder:
+        tickers = pd.read_csv(transformed_datasets_folder+'tickers.csv', sep=";")
+    else:
+        tickers, controverses = load_data.transformer(tickers, controverses)
+        tickers.to_csv(transformed_datasets_folder+'tickers.csv')
+        controverses.to_csv(transformed_datasets_folder+'controverses.csv')
+
+    ####################### Default threshold values #######################
+    thresholds = {
+        "price_variation": 5.0,
+        "volume_multiplier": 2.0,
+        "pe_threshold": 40.0,
+        "volatility_threshold": 0.1,
+        "market_cap_threshold": 0.1,
+        "environmental_threshold": 5.0,
+        "governance_threshold": 3.0,
+        "dividend_threshold": 0.2,
+        "eps_threshold": -0.1
+    }
+
+    st.title("Threshold Settings")
+
+    # Create sliders and number inputs for thresholds
+    for key, value in thresholds.items():
+        thresholds[key] = st.number_input(f"{key.replace('_', ' ').title()}", value=value, step=0.1, format="%.2f")
+
+    # Display updated values
+    st.write("### Updated Thresholds")
+    st.json(thresholds)
+
+    ############################# User Stock Input #############################
     user_ticker = st.text_input("Enter a stock ticker (e.g., AAPL, TSLA):")
     if user_ticker:
         stock = yf.Ticker(user_ticker)
@@ -125,10 +128,3 @@ def main():
         # Save Filtered Data
         controverses.to_csv('controverses_filtered.csv', index=False, sep=";", encoding="utf-8")
         st.success("Filtered data saved as controverses_filtered.csv")
-
-    # Config Adjustments
-    st.header("Set Anomaly Thresholds")
-    config['thresholds']['price_variation'] = st.slider("Price Variation (%)", 1, 10, int(thresholds['price_variation']))
-    config['thresholds']['volume_multiplier'] = st.slider("Volume Multiplier", 1, 5, int(thresholds['volume_multiplier']))
-    config['thresholds']['pe_threshold'] = st.slider("P/E Threshold", 10, 100, int(thresholds['pe_threshold']))
-    save_config(config)
