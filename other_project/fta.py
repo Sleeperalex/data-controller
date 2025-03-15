@@ -33,12 +33,13 @@ def main():
 
     transformed_datasets_folder = "transformed_datasets"
 
-    if transformed_datasets_folder:
-        tickers = pd.read_csv(transformed_datasets_folder+'tickers.csv', sep=";")
+    if transformed_datasets_folder in os.listdir():
+        tickers = pd.read_csv(transformed_datasets_folder+'/tickers.csv', sep=";")
+        controverses = pd.read_csv(transformed_datasets_folder+'/controverses.csv', sep=";")
     else:
         tickers, controverses = load_data.transformer(tickers, controverses)
-        tickers.to_csv(transformed_datasets_folder+'tickers.csv')
-        controverses.to_csv(transformed_datasets_folder+'controverses.csv')
+        tickers.to_csv(transformed_datasets_folder+'/tickers.csv')
+        controverses.to_csv(transformed_datasets_folder+'/controverses.csv')
 
     ####################### Default threshold values #######################
     thresholds = {
