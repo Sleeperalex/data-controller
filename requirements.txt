@@ -4,7 +4,5 @@ streamlit==1.40.2
 plotly==5.24.1
 pygwalker==0.4.9.13
 PyPDF2
-tensorflow
 transformers
-tf-keras
 yfinance
