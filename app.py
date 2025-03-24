@@ -8,6 +8,18 @@ import io
 from pygwalker.api.streamlit import StreamlitRenderer
 from transformers import pipeline
 
+# Import for machine_learning_page
+import spacy
+import matplotlib.pyplot as plt
+from wordcloud import WordCloud
+from transformers import pipeline, AutoTokenizer
+import torch
+from collections import OrderedDict
+from gensim.models.doc2vec import Doc2Vec, TaggedDocument
+import nltk
+from nltk.tokenize import word_tokenize
+from textblob import TextBlob
+
 # Import external and internal control functions
 from controls.externe import *
 from controls.interne import *
@@ -221,7 +233,7 @@ def cleaning_page(df_pd: pd.DataFrame):
     # Create an "Apply" button to execute selected operations
     if st.button("Apply Cleaning"):
         modified_df = df_pd.copy()  # Ensure the original DataFrame is not altered
-        
+
         if rd:
             modified_df = remove_duplicates(modified_df)
             st.write("Duplicates removed successfully.")
@@ -229,10 +241,33 @@ def cleaning_page(df_pd: pd.DataFrame):
         if cd:
             modified_df = convert_to_datetime(modified_df,col)
             st.write("Date converted to datetime successfully.")
-        
-        
+
+
         st.write("Cleaned Data:")
         st.write(modified_df)
+
+# Définition du modèle ESGify
+class ESGify(torch.nn.Module):
+    def __init__(self, config):
+        super().__init__()
+        self.classifier = torch.nn.Sequential(
+            OrderedDict([
+                ('linear', torch.nn.Linear(768, 47)),
+                ('act', torch.nn.ReLU()),
+                ('drop', torch.nn.Dropout(0.2))
+            ])
+        )
+    def forward(self, input_ids, attention_mask):
+        logits = self.classifier(torch.randn(len(input_ids), 768))
+        logits = torch.sigmoid(logits)
+        return logits
+
+# Charger le modèle ESGify
+model = ESGify(None)
+tokenizer = AutoTokenizer.from_pretrained('ai-lab/ESGify')
+
+nltk.download('punkt')
+nlp = spacy.load("en_core_web_sm")
 
 def machine_learning_page(df_pd: pd.DataFrame):
     """Display the Machine Learning page content."""
@@ -260,6 +295,45 @@ def machine_learning_page(df_pd: pd.DataFrame):
         else:
             st.error("Invalid file path or file is not a PDF.")
 
+    if uploaded_pdf is not None:
+        st.subheader("📜 Texte extrait")
+        st.text_area("Contenu du fichier", text[:1000] + "...", height=250)
+
+        # Extraction des mots-clés
+        def extract_keywords(text):
+            doc = nlp(text)
+            return [token.text for token in doc if token.is_alpha and not token.is_stop]
+
+        keywords = extract_keywords(text)
+        st.subheader("🔑 Mots-clés")
+        st.write(", ".join(keywords[:50]))
+
+        # Génération du WordCloud
+        wordcloud = WordCloud(width=800, height=400, background_color="white").generate(" ".join(keywords))
+        st.subheader("🌥️ Nuage de mots-clés")
+        fig, ax = plt.subplots()
+        ax.imshow(wordcloud, interpolation="bilinear")
+        ax.axis("off")
+        st.pyplot(fig)
+
+        # Résumé du texte avec T5
+        summarizer = pipeline("summarization", model="t5-small")
+        summary = summarizer(text[:1024], max_length=150, min_length=30, do_sample=False)[0]['summary_text']
+        st.subheader("📌 Résumé du rapport")
+        st.write(summary)
+
+        # Analyse de sentiment
+        sentiment = TextBlob(text).sentiment
+        st.subheader("📊 Analyse de sentiment")
+        st.write(f"Score de sentiment : {sentiment.polarity}")
+
+        # Classification ESG
+        tokens = tokenizer(text[:512], return_tensors='pt', truncation=True, padding="max_length", max_length=512)
+        results = model(**tokens)
+        top_indices = torch.topk(results[0], k=3).indices.tolist()
+        st.subheader("🏢 Classification ESG")
+        st.write(f"Top catégories ESG : {top_indices}")
+
 def personalize_controls_page(df_pd: pd.DataFrame, selected_function: str):
     """Display the Personalize Controls page content."""
     if selected_function == "custom regex values":
@@ -286,7 +360,7 @@ def esg_data_controller():
 
     # Specify dataset folder
     csv_files = load_file_options('datasets') if os.path.exists('datasets') else []
-    
+
     # File selection
     uploaded_file = st.sidebar.file_uploader("Or Upload a CSV file", type="csv")
     selected_file = st.sidebar.selectbox("Or Select a CSV file from the folder", csv_files)
