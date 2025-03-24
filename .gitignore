@@ -5,3 +5,6 @@
 /other_project/__pycache__/
 /MA/__pycache__/
 *.csv
+!/datasets/asmall_sample.csv
+!/datasets/controverses.csv
+!/datasets/ticker_nace.csv
