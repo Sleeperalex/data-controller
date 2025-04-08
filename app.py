@@ -234,31 +234,52 @@ def cleaning_page(df_pd: pd.DataFrame):
         st.write("Cleaned Data:")
         st.write(modified_df)
 
-def machine_learning_page(df_pd: pd.DataFrame):
-    """Display the Machine Learning page content."""
-    st.write("This feature is under development.")
+def machine_learning_page():
 
-    # PDF extraction
-    st.subheader("PDF Text Extraction")
-    uploaded_pdf = st.file_uploader("Upload PDF File", type="pdf")
-
-    if uploaded_pdf is not None:
-        # Extract text from the uploaded PDF
-        extracted_text = extract_pdf_text(uploaded_pdf)
-        ner_pipeline = pipeline("ner", grouped_entities=True)
-        text = extracted_text
-        entities = ner_pipeline(text)
-        df_entities = pd.DataFrame(entities)
-        st.dataframe(df_entities)
-
-    # Option to upload a PDF from local file path
-    file_path = st.text_input("Enter file path for local PDF extraction")
-    if file_path:
-        if os.path.exists(file_path) and file_path.endswith(".pdf"):
-            extracted_text_local = extract_pdf_from_local(file_path)
-            st.text_area("Extracted Text from Local File", extracted_text_local, height=300)
-        else:
-            st.error("Invalid file path or file is not a PDF.")
+    st.title("ESG Report Analyzer")
+    st.write("""
+    Upload your ESG report file (PDF, DOCX, or TXT) to extract structured data.
+    This tool will attempt to identify ESG metrics, categorize statements, and extract relevant data points.
+    """)
+    uploaded_file = st.file_uploader("Upload ESG Report", type=['pdf', 'docx', 'txt'])
+    if uploaded_file is not None:
+        st.info(f"Processing {uploaded_file.name}...")
+        file_extension = uploaded_file.name.split('.')[-1].lower()
+        try:
+            if file_extension == 'pdf':
+                text = extract_text_from_pdf(uploaded_file)
+            elif file_extension == 'docx':
+                text = extract_text_from_docx(uploaded_file)
+            elif file_extension == 'txt':
+                text = extract_text_from_txt(uploaded_file)
+            else:
+                st.error("Unsupported file format.")
+                return
+            st.subheader("Sample of Extracted Text")
+            st.text_area("Extracted Text", text, height=200)
+            category_df = text_to_dataframe(text)
+            st.subheader("ESG Categories and Statements")
+            if len(category_df) > 0:
+                st.dataframe(category_df)
+            else:
+                st.warning("No ESG categories detected in the text.")
+            if len(category_df) > 0:
+                st.subheader("ESG Sentiment Scores")
+                sentiment_summary = category_df.groupby("Category")["Sentiment Score"].mean().reset_index()
+                sentiment_summary.columns = ["ESG Pillar", "Average Sentiment"]
+                st.dataframe(sentiment_summary)
+                st.bar_chart(sentiment_summary.set_index("ESG Pillar"))
+            if len(category_df) > 0:
+                st.subheader("Download Results")
+                csv_category = category_df.to_csv(index=False).encode('utf-8')
+                st.download_button(
+                    label="Download ESG Categories CSV",
+                    data=csv_category,
+                    file_name="esg_categories.csv",
+                    mime="text/csv"
+                )
+        except Exception as e:
+            st.error(f"Error processing file: {str(e)}")
 
 def personalize_controls_page(df_pd: pd.DataFrame, selected_function: str):
     """Display the Personalize Controls page content."""
@@ -348,7 +369,7 @@ def esg_data_controller():
         cleaning_page(df_pd)
     with tab5:
         st.markdown("<h1 style='text-align: center;'>Machine Learning</h1>", True)
-        machine_learning_page(df_pd)
+        machine_learning_page()
     with tab6:
         st.markdown("<h1 style='text-align: center;'>Personalize Controls</h1>", True)
         selected_function = st.selectbox("Choose function for Personalize Controls", [
